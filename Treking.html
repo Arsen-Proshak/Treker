@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Система відстеження відправлень</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@tailwindcss/browser@latest"></script>
+    <style>
+        .custom-table-wrapper {
+            overflow-x: auto;
+        }
+        .custom-table {
+            min-width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1rem;
+            background-color: #fff;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: table; 
+        }
+        .custom-table thead {
+            display: table-header-group; 
+        }
+        .custom-table tbody {
+            display: table-row-group; 
+        }
+        .custom-table th,
+        .custom-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: left;
+            display: table-cell; 
+        }
+        .custom-table th {
+            font-weight: 600;
+            color: #4a5568;
+        }
+        .custom-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+        .custom-table tbody tr:hover {
+            background-color: #f7fafc;
+        }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.375rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .status-new {
+            background-color: #f0fdf4;
+            color: #15803d;
+        }
+        .status-warehouse {
+            background-color: #fef08a;
+            color: #854d0e;
+        }
+        .status-carrier {
+            background-color: #fecaca;
+            color: #991b1b;
+        }
+        .status-recipient {
+            background-color: #d9f99d;
+            color: #3f6212;
+        }
+        .status-delivered {
+            background-color: #ecfccb;
+            color: #16a34a;
+        }
+        .status-lost {
+            background-color: #fee2e2;
+            color: #b91c1c;
+        }
+        .btn-primary {
+            background-color: #6b7280;
+            color: #fff;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-right: 0.5rem;
+        }
+        .btn-primary:hover {
+            background-color: #374151;
+        }
+        .btn-secondary {
+            background-color: #e5e7eb;
+            color: #374151;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .btn-secondary:hover {
+            background-color: #d1d5db;
+        }
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 0.375rem;
+            border: 1px solid #d1d5db;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+        }
+        .form-label {
+            margin-bottom: 0.5rem;
+            display: block;
+            font-weight: 500;
+            color: #374151;
+        }
+        .text-error {
+            color: #dc2626;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+        .text-success {
+            color: #16a34a;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 10;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #fff;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            width: 90%;
+            max-width: 600px;
+            position: relative;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 1rem;
+        }
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: #374151;
+        }
+        .close-button {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 1.25rem;
+            cursor: pointer;
+            color: #4a5568;
+            opacity: 0.7;
+            transition: opacity 0.2s ease;
+        }
+        .close-button:hover {
+            opacity: 1;
+        }
+        .modal-body {
+            margin-bottom: 1.5rem;
+        }
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+        }
+        .table-container {
+            overflow-x: auto;
+            margin-top: 2rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans antialiased">
+    <div class="container mx-auto p-6">
+        <h1 class="text-2xl font-semibold text-gray-800 mb-8 text-center">Система відстеження відправлень</h1>
+
+        <div id="shipment-list" class="table-container">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4">Список відправлень</h2>
+            <div class="custom-table-wrapper">
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            <th>ID відправлення</th>
+                            <th>Вага (кг)</th>
+                            <th>Вартість (грн)</th>
+                            <th>Габарити (см)</th>
+                            <th>Звідки</th>
+                            <th>Куди</th>
+                            <th>Статус</th>
+                            <th>Дії</th>
+                        </tr>
+                    </thead>
+                    <tbody id="shipment-table-body">
+                        <tr>
+                            <td colspan="8" class="text-center py-4">Немає відправлень для відображення.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="statistics" class="mt-8">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4">Статистика доставок</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="bg-white rounded-md shadow-md p-4">
+                    <h3 class="text-lg font-semibold text-gray-600">Загальна кількість відправлень: <span id="total-shipments" class="text-gray-800">0</span></h3>
+                </div>
+                <div class="bg-white rounded-md shadow-md p-4">
+                    <h3 class="text-lg font-semibold text-gray-600">Успішно доставлено: <span id="delivered-shipments" class="text-gray-800">0</span></h3>
+                </div>
+                <div class="bg-white rounded-md shadow-md p-4">
+                    <h3 class="text-lg font-semibold text-gray-600">Втрачено відправлень: <span id="lost-shipments" class="text-gray-800">0</span></h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-8 flex justify-center">
+            <button id="create-shipment-button" class="btn-primary">Створити відправлення</button>
+        </div>
+
+        <div id="create-shipment-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Створити відправлення</h2>
+                    <span class="close-button" id="close-create-modal">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <form id="create-shipment-form">
+                        <div class="form-group">
+                            <label for="weight" class="form-label">Вага (кг):</label>
+                            <input type="number" id="weight" name="weight" required class="form-input" placeholder="Вкажіть вагу у кг">
+                            <p id="weight-error" class="text-error"></p>
+                        </div>
+                        <div class="form-group">
+                            <label for="cost" class="form-label">Вартість (грн):</label>
+                            <input type="number" id="cost" name="cost" required class="form-input" placeholder="Вкажіть вартість у грн">
+                            <p id="cost-error" class="text-error"></p>
+                        </div>
+                        <div class="form-group">
+                            <label for="dimensions" class="form-label">Габарити (см):</label>
+                            <input type="text" id="dimensions" name="dimensions" required class="form-input" placeholder="Наприклад: 10x20x30">
+                            <p id="dimensions-error" class="text-error"></p>
+                        </div>
+                        <div class="form-group">
+                            <label for="source" class="form-label">Звідки:</label>
+                            <input type="text" id="source" name="source" required class="form-input" placeholder="Вкажіть місце відправлення">
+                            <p id="source-error" class="text-error"></p>
+                        </div>
+                        <div class="form-group">
+                            <label for="destination" class="form-label">Куди:</label>
+                            <input type="text" id="destination" name="destination" required class="form-input" placeholder="Вкажіть місце призначення">
+                            <p id="destination-error" class="text-error"></p>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="save-shipment-button" class="btn-primary">Зберегти</button>
+                    <button type="button" id="cancel-shipment-button" class="btn-secondary">Скасувати</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="status-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Змінити статус відправлення</h2>
+                    <span class="close-button" id="close-status-modal">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <form id="update-status-form">
+                        <div class="form-group">
+                            <label for="status" class="form-label">Новий статус:</label>
+                            <select id="status" name="status" class="form-input">
+                                <option value="new">Новий</option>
+                                <option value="warehouse">На складі</option>
+                                <option value="carrier">У перевізника</option>
+                                <option value="recipient">У отримувача</option>
+                                <option value="delivered">Доставлено</option>
+                                <option value="lost">Втрачено</option>
+                            </select>
+                            <p id="status-error" class="text-error"></p>
+                        </div>
+                        <div class="form-group">
+                            <label for="operation-date" class="form-label">Дата операції:</label>
+                            <input type="date" id="operation-date" name="operation-date" required class="form-input">
+                            <p id="operation-date-error" class="text-error"></p>
+                        </div>
+                        <input type="hidden" id="shipment-id">
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="update-status-button" class="btn-primary">Зберегти</button>
+                    <button type="button" id="cancel-status-button" class="btn-secondary">Скасувати</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let shipments = [];
+        let shipmentIdCounter = 1;
+
+        if (localStorage.getItem('shipments')) {
+            shipments = JSON.parse(localStorage.getItem('shipments'));
+            shipmentIdCounter = Math.max(0, ...shipments.map(s => s.id)) + 1;
+        }
+
+        const shipmentTableBody = document.getElementById('shipment-table-body');
+        const createShipmentButton = document.getElementById('create-shipment-button');
+        const createShipmentModal = document.getElementById('create-shipment-modal');
+        const closeCreateModalButton = document.getElementById('close-create-modal');
+        const cancelCreateShipmentButton = document.getElementById('cancel-shipment-button');
+        const saveShipmentButton = document.getElementById('save-shipment-button');
+        const createShipmentForm = document.getElementById('create-shipment-form');
+
+        const statusModal = document.getElementById('status-modal');
+        const closeStatusModalButton = document.getElementById('close-status-modal');
+        const cancelStatusButton = document.getElementById('cancel-status-button');
+        const updateStatusForm = document.getElementById('update-status-form');
+        const updateStatusButton = document.getElementById('update-status-button');
+
+        const totalShipmentsElement = document.getElementById('total-shipments');
+        const deliveredShipmentsElement = document.getElementById('delivered-shipments');
+        const lostShipmentsElement = document.getElementById('lost-shipments');
+
+        function validateForm(form) {
+            const errors = {};
+            let hasErrors = false;
+
+            const weightInput = form.querySelector('#weight');
+            const costInput = form.querySelector('#cost');
+            const dimensionsInput = form.querySelector('#dimensions');
+            const sourceInput = form.querySelector('#source');
+            const destinationInput = form.querySelector('#destination');
+            const operationDateInput = form.querySelector('#operation-date');
+
+
+            if (weightInput && (weightInput.value === '' || isNaN(Number(weightInput.value)) || Number(weightInput.value) <= 0)) {
+                errors.weight = 'Будь ласка, введіть коректну вагу (більше 0).';
+                hasErrors = true;
+            }
+            if (costInput && (costInput.value === '' || isNaN(Number(costInput.value)) || Number(costInput.value) <= 0)) {
+                errors.cost = 'Будь ласка, введіть коректну вартість (більше 0).';
+                hasErrors = true;
+            }
+            if (dimensionsInput && dimensionsInput.value === '') {
+                errors.dimensions = 'Будь ласка, введіть габарити.';
+                hasErrors = true;
+            }
+            if (sourceInput && sourceInput.value === '') {
+                errors.source = 'Будь ласка, введіть місце відправлення.';
+                hasErrors = true;
+            }
+            if (destinationInput && destinationInput.value === '') {
+                errors.destination = 'Будь ласка, введіть місце призначення.';
+                hasErrors = true;
+            }
+             if (operationDateInput && operationDateInput.value === '') {
+                errors.operationDate = 'Будь ласка, введіть дату операції.';
+                hasErrors = true;
+            }
+
+            for (const key in errors) {
+                const errorElement = form.querySelector(`#${key}-error`);
+                if (errorElement) {
+                    errorElement.textContent = errors[key];
+                }
+            }
+            return !hasErrors;
+        }
+
+        function displayShipments() {
+            if (shipments.length === 0) {
+                shipmentTableBody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Немає відправлень для відображення.</td></tr>';
+                totalShipmentsElement.textContent = '0';
+                deliveredShipmentsElement.textContent = '0';
+                lostShipmentsElement.textContent = '0';
+                return;
+            }
+
+            shipmentTableBody.innerHTML = shipments.map(shipment => {
+                const dimensions = shipment.dimensions.split('x').map(Number);
+                const volume = dimensions.reduce((acc, val) => acc * val, 1);
+                let statusBadge = '';
+                switch (shipment.status) {
+                    case 'new':
+                        statusBadge = `<span class="status-badge status-new">Новий</span>`;
+                        break;
+                    case 'warehouse':
+                        statusBadge = `<span class="status-badge status-warehouse">На складі</span>`;
+                        break;
+                    case 'carrier':
+                        statusBadge = `<span class="status-badge status-carrier">У перевізника</span>`;
+                        break;
+                    case 'recipient':
+                        statusBadge = `<span class="status-badge status-recipient">У отримувача</span>`;
+                        break;
+                    case 'delivered':
+                        statusBadge = `<span class="status-badge status-delivered">Доставлено</span>`;
+                        break;
+                    case 'lost':
+                        statusBadge = `<span class="status-badge status-lost">Втрачено</span>`;
+                        break;
+                    default:
+                        statusBadge = `<span class="status-badge status-new">Новий</span>`;
+                }
+
+                return `
+                    <tr>
+                        <td>${shipment.id}</td>
+                        <td>${shipment.weight}</td>
+                        <td>${shipment.cost}</td>
+                        <td>${shipment.dimensions} (${volume} см³)</td>
+                        <td>${shipment.source}</td>
+                        <td>${shipment.destination}</td>
+                        <td>${statusBadge}</td>
+                        <td><button class="btn-primary btn-sm change-status-button" data-id="${shipment.id}">Змінити статус</button></td>
+                    </tr>
+                `;
+            }).join('');
+
+            const changeStatusButtons = document.querySelectorAll('.change-status-button');
+            changeStatusButtons.forEach(button => {
+                button.addEventListener('click', openStatusModal);
+            });
+
+            totalShipmentsElement.textContent = shipments.length;
+            deliveredShipmentsElement.textContent = shipments.filter(shipment => shipment.status === 'delivered').length;
+            lostShipmentsElement.textContent = shipments.filter(shipment => shipment.status === 'lost').length;
+        }
+
+        function createShipment() {
+            if (!validateForm(createShipmentForm)) {
+                return;
+            }
+
+            const weight = Number(document.getElementById('weight').value);
+            const cost = Number(document.getElementById('cost').value);
+            const dimensions = document.getElementById('dimensions').value;
+            const source = document.getElementById('source').value;
+            const destination = document.getElementById('destination').value;
+
+            const newShipment = {
+                id: shipmentIdCounter++,
+                weight,
+                cost,
+                dimensions,
+                source,
+                destination,
+                status: 'new',
+                history: [{ status: 'new', date: new Date().toISOString() }]
+            };
+
+            shipments.push(newShipment);
+            localStorage.setItem('shipments', JSON.stringify(shipments));
+            displayShipments();
+            createShipmentModal.style.display = 'none';
+            createShipmentForm.reset();
+        }
+
+        function openStatusModal(event) {
+            const shipmentId = Number(event.target.dataset.id);
+            const shipment = shipments.find(s => s.id === shipmentId);
+            if (shipment) {
+                document.getElementById('shipment-id').value = shipmentId;
+                document.getElementById('status').value = shipment.status;
+                statusModal.style.display = 'block';
+            }
+        }
+
+        function updateShipmentStatus() {
+            if (!validateForm(updateStatusForm)) {
+                return;
+            }
+            const shipmentId = Number(document.getElementById('shipment-id').value);
+            const newStatus = document.getElementById('status').value;
+            const operationDate = document.getElementById('operation-date').value;
+
+            const shipmentIndex = shipments.findIndex(s => s.id === shipmentId);
+            if (shipmentIndex !== -1) {
+                shipments[shipmentIndex].status = newStatus;
+                shipments[shipmentIndex].history.push({ status: newStatus, date: operationDate });
+                localStorage.setItem('shipments', JSON.stringify(shipments));
+                displayShipments();
+                statusModal.style.display = 'none';
+                updateStatusForm.reset();
+            }
+        }
+
+        createShipmentButton.addEventListener('click', () => {
+            createShipmentModal.style.display = 'block';
+        });
+
+        closeCreateModalButton.addEventListener('click', () => {
+            createShipmentModal.style.display = 'none';
+        });
+
+        cancelCreateShipmentButton.addEventListener('click', () => {
+            createShipmentModal.style.display = 'none';
+        });
+
+        saveShipmentButton.addEventListener('click', createShipment);
+
+        closeStatusModalButton.addEventListener('click', () => {
+            statusModal.style.display = 'none';
+        });
+
+        cancelStatusButton.addEventListener('click', () => {
+            statusModal.style.display = 'none';
+        });
+
+        updateStatusButton.addEventListener('click', updateShipmentStatus);
+
+        window.addEventListener('click', (event) => {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
+            }
+        });
+
+        displayShipments();
+    </script>
+</body>
+</html>
